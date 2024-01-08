@@ -7,6 +7,7 @@
   :maintainer "David Krentzlin <david.krentzlin@gmail.com>"
   :licence "BSD"
   :depends-on ("alexandria" "serapeum")
+  :entry-point "agol:main"
   :serial t
   :pathname "src"
   :components
@@ -14,4 +15,7 @@
    (:module "core"
     :components
     ((:file "state")))
-   (:module "frontend")))
+   (:module "frontend"
+    :components
+    ((:file "console")))
+   (:file "main")))
