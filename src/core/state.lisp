@@ -145,6 +145,7 @@
 
 (defclass state ()
   ((live-grid
+    :reader live-grid
     :initarg :live-grid
     :initform (error "Must supply cells")
     :type grid)
@@ -164,11 +165,11 @@
                  :live-grid (make-grid width height :cell-constructor #'make-random-cell)
                  :update-grid (make-grid width height)))
 
+
 ;;; Rules to create the next generation
 ;;;
 ;;; 1. If the cell is alive, then it stays alive if it has either 2 or 3 live neighbors
 ;;; 2. If the cell is dead, then it springs to life only in the case that it has 3 live neighbors
-
 (defun next-generation (state)
   (with-slots (live-grid update-grid generation) state
     (do-cells ((cell x y) live-grid)
