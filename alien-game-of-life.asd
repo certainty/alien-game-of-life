@@ -12,6 +12,7 @@
   :pathname "src"
   :components
   ((:file "packages")
+   (:file "settings")
    (:module "core"
     :components
     ((:file "state")))

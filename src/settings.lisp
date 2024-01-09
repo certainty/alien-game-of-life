@@ -1,0 +1,10 @@
+(in-package :agol)
+
+(defparameter *max-generations* nil "nil means infinite")
+(defparameter *grid-width* 150)
+(defparameter *grid-height* 100)
+(defparameter *grid-wraps-around-p* t "if true, the grid wraps around at the edges")
+(defparameter *mutation-rate* 0.0)
+(defparameter *enable-colors* t)
+(defparameter *frontend* 'console "the frontend to use")
+(defparameter *stop-when-stable* nil "if true, stop when the game is stable")

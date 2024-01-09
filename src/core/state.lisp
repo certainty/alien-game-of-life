@@ -1,5 +1,12 @@
 (in-package :agol.core)
 
+(defparameter *grid-width* 150)
+(defparameter *grid-height* 100)
+(defparameter *grid-wraps-around-p* t "if true, the grid wraps around at the edges")
+(defparameter *mutation-rate* 0.0)
+(defparameter *enable-colors* t)
+
+
 ;;; Cells are 8-bit unsigned integers
 ;;; The bit pattern is
 ;;; The zeroth bit is 1 if the cell is alive, 0 if it is dead
@@ -64,84 +71,55 @@
   ((cells
     :initarg :cells
     :initform (error "Must supply cells")
-    :type (array cell-t *))
+    :type (array cell-t))
    (width
     :initarg :width
     :initform (error "Must supply width")
-    :type (integer 1 *))
+    :type fixnum)
    (height
     :initarg :height
     :initform (error "Must supply height")
-    :type (integer 1 *))))
+    :type fixnuma)))
 
-;; (defun make-grid (width height &key (cell-constructor #'make-cell))
-;;   "Create a new grid of `WIDTH' and `HEIGHT' using `CELL-CONSTRUCTOR' to create the cells"
-;;   (let* ((array-size (* width height))
-;;          (cells (make-array array-size :element-type 'cell-t :initial-element 0))
-;;          (grid  (make-instance 'grid :cells cells :width width :height height)))
-;;     (prog1 grid
-;;       (do-cells ((cell x y) grid)
-;;         (declare (ignorable cell))
-;;         (setf (gref grid x y) (funcall cell-constructor))))))
-
-(s:define-do-macro do-cells (((cell x y) grid &optional return) &body body)
-  "Iterate over all the cells in `GRID' and evaluate `BODY' for each one.
-   `X' and `Y' are the coordinates of the cell.
-
-   The grid is traversed row by row, left to right, top to bottom.
-  "
-  `(with-slots (width height) ,grid
-     (dotimes (,y height)
-       (dotimes (,x width)
-         (let ((,cell (gref ,grid ,x ,y)))
-           ,@body)))))
+(s:define-do-macro do-cells (((cells x y) grid &optional return) &body body)
+  `(let ((,cells (slot-value ,grid 'cells)))
+     (dotimes (,y (the fixnum (slot-value ,grid 'height)))
+       (dotimes (,x (the fixnum (slot-value ,grid 'width)))
+         ,@body))))
 
 (defun make-grid (width height &key (cell-constructor #'make-cell))
-  (s:lret* ((cells (make-array (* width height) :element-type 'cell-t :initial-element 0))
-            (grid (make-instance 'grid :cells cells :width width :height height)))
-    (do-cells ((cell x y) grid)
-      (declare (ignorable cell))
-      (setf (gref grid x y) (funcall cell-constructor)))))
-
-(defun compute-index (grid x y)
-  "Compute the index of the cell at `X' and `Y' in a grid of `WIDTH'"
-  (with-slots (width height) grid
-    (assert (and (>= x 0) (< x width)
-                 (>= y 0) (< y height)))
-    (+ (* y width) x)))
-
-(defun gref (grid x y)
-  "Return the cell at `X' and `Y' in `GRID'"
-  (with-slots (cells) grid
-    (aref cells (compute-index grid x y))))
-
-(defun (setf gref) (new-value grid x y)
-  "Set the cell at `X' and `Y' in `GRID' to `NEW-VALUE'"
-  (with-slots (cells) grid
-    (setf (aref cells (compute-index grid x y)) new-value)))
+  (s:lret ((grid (make-instance 'grid :cells (make-array (list width height) :element-type 'cell-t :initial-element 0) :width width :height height)))
+    (do-cells ((cells x y) grid)
+      (setf (aref cells x y) (funcall cell-constructor)))))
 
 (s:define-do-macro do-neighbours (((cell nx ny) grid x y &optional return) &body body)
   "Iterate over the neighbours of the cell at `X' and `Y' in `GRID' and evaluate `BODY' for each one.
    For cells on the fringe of the grid, neighbours that would be off the grid are ignored.
   "
-  `(with-slots (width height) ,grid
-     (dotimes (dx 3)
-       (dotimes (dy 3)
-         (let ((,nx (+ x dx -1))
-               (,ny (+ y dy -1)))
-           (when (and (>= ,nx 0) (< ,nx width)
-                      (>= ,ny 0) (< ,ny height))
-             (let ((,cell (gref ,grid ,nx ,ny)))
-               ,@body)))))))
+  (a:with-gensyms (dx dy)
+    `(with-slots (width height) ,grid
+       (dotimes (,dx 3)
+         (dotimes (,dy 3)
+           (let ((,nx (+ ,x ,dx -1))
+                 (,ny (+ ,y ,dy -1)))
 
+             (when *grid-wraps-around-p*
+               (setf ,nx (mod ,nx width)
+                     ,ny (mod ,ny height)))
+
+             (when (and (>= ,nx 0) (< ,nx width)
+                        (>= ,ny 0) (< ,ny height))
+               (let ((,cell (aref ,grid ,nx ,ny)))
+                 ,@body))))))))
+
+(-> count-live-neighbours (grid fixnum fixnum) fixnum)
 (defun count-live-neighbours (grid x y)
   "Count the number of live neighbours of the cell at `X' and `Y' in `GRID'"
-  (let ((count 0))
+  (declare (optimize (speed 3) (safety 0)))
+  (s:lret ((count (the fixnum 0)))
     (do-neighbours ((neighbour nx ny) grid x y)
-      (declare (ignorable nx ny))
       (when (cell-alive-p neighbour)
-        (incf count)))
-    count))
+        (incf count)))))
 
 (defclass state ()
   ((live-grid
@@ -156,7 +134,7 @@
    (generation
     :initarg :generation
     :initform 1
-    :type (integer 1 *))))
+    :type (unsigned-byte 64))))
 
 (defun initial-state (width height)
   "Create the initial game state with a board of `WIDTH' and `HEIGHT'.
@@ -171,19 +149,21 @@
 ;;; 1. If the cell is alive, then it stays alive if it has either 2 or 3 live neighbors
 ;;; 2. If the cell is dead, then it springs to life only in the case that it has 3 live neighbors
 (defun next-generation (state)
+  (declare (optimize (speed 3) (safety 0)))
   (with-slots (live-grid update-grid generation) state
-    (do-cells ((cell x y) live-grid)
-      (declare (ignorable x y))
-      (let ((live-neighbours (count-live-neighbours live-grid x y)))
-        (setf (gref update-grid x y)
-              (if (cell-alive-p cell)
-                  (if (or (= live-neighbours 2)
-                          (= live-neighbours 3))
-                      (update-cell cell t)
-                      (update-cell cell nil))
-                  (if (= live-neighbours 3)
-                      (update-cell cell t)
-                      (update-cell cell nil))))))
+    (let ((update-cells (slot-value update-grid 'cells)))
+      (do-cells ((cells x y) live-grid)
+        (let ((cell (aref cells x y))
+              (live-neighbours (count-live-neighbours live-grid x y)))
+          (setf (aref update-cells x y)
+                (if (cell-alive-p cell)
+                    (if (or (= live-neighbours 2)
+                            (= live-neighbours 3))
+                        (update-cell cell t)
+                        (update-cell cell nil))
+                    (if (= live-neighbours 3)
+                        (update-cell cell t)
+                        (update-cell cell nil)))))))
     (incf generation)
     (rotatef live-grid update-grid)
     state))

@@ -4,7 +4,18 @@
   (:use :cl)
   (:local-nicknames (:a :alexandria) (:s :serapeum))
   (:import-from :serapeum :->)
-  (:export :main))
+  (:export
+   :*game*
+   :*max-generations*
+   :*grid-width*
+   :*grid-height*
+   :*grid-wraps-around-p*
+   :*enable-colors-p*
+   :*mutation-rate*
+   :*frontend*
+   :*stop-when-stable-p*
+   :tick
+   :run-game))
 
 (defpackage :agol.core
   (:use :cl)
