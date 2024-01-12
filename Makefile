@@ -1,4 +1,4 @@
 .PHONY: run
 
 run:
-	ros run -Q -e '(ql:quickload :alien-game-of-life)' -e '(agol:main)'
+	sbcl --eval '(progn (ql:quickload :alien-game-of-life))' --eval '(agol:run-game)' --quit

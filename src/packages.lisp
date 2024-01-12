@@ -29,6 +29,9 @@
    :state
    :do-cells
    :live-grid
+   :generation
+   :live-cells
+   :stop-when-stable-p
    :next-generation))
 
 (defpackage :agol.frontend.console

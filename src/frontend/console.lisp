@@ -2,15 +2,20 @@
 
 (defun draw (state)
   (clear-screen)
+  (format t "Generation: ~a Max-Generations: ~a Live-Cells: ~a Stop when stable: ~a~%"
+          (agol.core:generation state)
+          agol::*max-generations*
+          (agol.core:live-cells state)
+          (agol.core:stop-when-stable-p state))
   (draw-grid (agol.core:live-grid state)))
 
 (defun draw-grid (grid)
-  (let ((row 0))
-    (agol.core::do-cells ((cell x y) grid)
-      (unless (= row y)
+  (let ((current-row 0))
+    (agol.core::do-cells ((cells row column) grid)
+      (unless (= current-row row)
         (format t "~%")
-        (setf row y))
-      (format t "~a" (if (agol.core:cell-alive-p cell) "X" " ")))))
+        (setf current-row row))
+      (format t "~a" (if (agol.core:cell-alive-p (aref cells row column)) "▇" " ")))))
 
 (defun clear-screen ()
   "Clears the screen and sets the cursor to the top left."
