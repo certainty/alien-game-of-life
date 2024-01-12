@@ -11,9 +11,10 @@
    :enable-colors-p *enable-colors-p*))
 
 (defun run-game ()
-  (let ((game (make-game))
-        (current-generation 0)
-        (ticks-without-change 0))
+  (let* ((game (make-game))
+         (current-generation 0)
+         (ticks-without-change 0)
+         (stop-when-stable (agol.core:stop-when-stable-p game)))
     (loop
       (when *stop-game*
         (return))
@@ -26,7 +27,7 @@
 
       (incf current-generation)
 
-      (when (and *stop-when-stable-p* (>= ticks-without-change *stop-when-stable-p*))
+      (when (and stop-when-stable (>= ticks-without-change *stable-threshold*))
         (return)))))
 
 (defun tick (game)
