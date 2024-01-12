@@ -13,8 +13,9 @@
   (let ((current-row 0))
     (agol.core::do-cells ((cells row column) grid)
       (unless (= current-row row)
-        (format t "~%")
+        (terpri)
         (setf current-row row))
+      ;; TODO: optimize the IO here
       (format t "~a" (if (agol.core:cell-alive-p (aref cells row column)) "▇" " ")))))
 
 (defun clear-screen ()
