@@ -107,20 +107,20 @@
   "
   (a:with-gensyms (nrow ncolumn)
     `(with-slots (rows columns wraps-around-p cells) ,grid
-       (dotimes (,nrow 3)
-         (dotimes (,ncolumn 3)
-           (let ((,neighbour-row (- ,row 1 ,nrow))
-                 (,neighbour-column (- ,column 1 ,ncolumn)))
-             (when wraps-around-p
-               (setf ,neighbour-row (mod ,neighbour-row rows))
-               (setf ,neighbour-column (mod ,neighbour-column columns)))
-
-             (when (and (>= ,neighbour-row 0)
-                        (>= ,neighbour-column 0)
-                        (< ,neighbour-row rows)
-                        (< ,neighbour-column columns))
-               (let ((,cell (aref cells ,neighbour-row ,neighbour-column)))
-                 ,@body))))))))
+       (loop :for row-offset from -1 :to 1
+             :do (loop :for column-offset :from -1 :to 1
+                       :do (let ((,nrow (+ ,row row-offset))
+                                 (,ncolumn (+ ,column column-offset)))
+                             (unless (and (= ,nrow ,row) (= ,ncolumn ,column))
+                               (when wraps-around-p
+                                 (setf ,nrow (mod ,nrow rows))
+                                 (setf ,ncolumn (mod ,ncolumn columns)))
+                               (when (and (>= ,nrow 0)
+                                          (>= ,ncolumn 0)
+                                          (< ,nrow rows)
+                                          (< ,ncolumn columns))
+                                 (let ((,cell (aref cells ,nrow ,ncolumn)))
+                                   ,@body)))))))))
 
 (defun count-live-neighbours (grid row column)
   "Count the number of live neighbours of the cell at `ROW' and `COLUMN' in `GRID'"
