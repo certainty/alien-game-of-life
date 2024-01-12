@@ -18,3 +18,10 @@ The code should be portable accross implementations, although I've only tested i
 ## Screenshot
 
 ![image](https://github.com/certainty/alien-game-of-life/assets/338957/c7db9a7d-d85e-45a2-a05e-e5c366bbcc8a)
+
+## Todo
+
+- [ ] Implement colors
+- [ ] Optimize IO for console frontend
+- [ ] Add signal handler and clean exit for console frontend
+- [ ] Add sdl2 frontend
