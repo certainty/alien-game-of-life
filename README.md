@@ -5,7 +5,7 @@
 1. [Common Lisp implementation](https://roswell.github.io/)
 2. [Quicklisp](https://www.quicklisp.org/beta/)
 
-In summary, you should know how to develop with common lisp. Sorry for the inconcenience :)
+In summary, you should know how to develop with common lisp. Sorry for the inconvenience :)
 
 ## Run it
 
