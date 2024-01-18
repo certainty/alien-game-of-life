@@ -6,8 +6,11 @@
   :author "David Krentzlin <david.krentzlin@gmail.com>"
   :maintainer "David Krentzlin <david.krentzlin@gmail.com>"
   :licence "BSD"
-  :depends-on ("alexandria" "serapeum")
-  :entry-point "agol:main"
+  :defsystem-depends-on (:deploy)
+  :build-operation "deploy-op"
+  :build-pathname "agol"
+  :depends-on ("alexandria" "serapeum" "cl-ansi-text" "cl-colors2")
+  :entry-point "agol::main"
   :serial t
   :pathname "src"
   :components

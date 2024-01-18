@@ -1,3 +1,4 @@
+bin
 *.FASL
 *.fasl
 *.lisp-temp

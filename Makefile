@@ -1,4 +1,7 @@
-.PHONY: run
+.PHONY: run build
 
-run:
-	sbcl --eval '(progn (ql:quickload :alien-game-of-life))' --eval '(agol:run-game)' --quit
+run: build
+	./bin/agol
+
+build:
+	sbcl --eval '(ql:quickload :alien-game-of-life)' --eval '(asdf:make :alien-game-of-life)' --quit

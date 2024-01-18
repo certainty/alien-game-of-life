@@ -9,4 +9,4 @@
 (defparameter *mutation-rate* 0.0)
 (defparameter *enable-colors-p* t)
 (defparameter *frontend* 'console "the frontend to use")
-(defparameter *sleep-time* 0.15 "time to sleep between generations")
+(defparameter *sleep-time* 0.08 "time to sleep between generations")
