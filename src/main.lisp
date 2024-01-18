@@ -24,28 +24,22 @@
       (sb-ext:quit))))
 
 (defun make-game ()
-  (agol.core:initial-state
+  (initial-state
    *grid-rows*
    *grid-columns*
-   :stop-when-stable-p *stop-when-stable-p*
    :grid-wraps-around-p *grid-wraps-around-p*
    :enable-colors-p *enable-colors-p*))
 
 (defun run-game ()
   (let* ((game (make-game))
          (current-generation 0)
-         (ticks-without-change 0)
-         (stop-when-stable (agol.core:stop-when-stable-p game)))
+         (ticks-without-change 0))
     (loop
       (when (or *stop-game* (and *max-generations* (> current-generation *max-generations*)))
         (return))
-
       (unless (tick game)
         (incf ticks-without-change))
-
-      (incf current-generation)
-      (when (and stop-when-stable (>= ticks-without-change *stable-threshold*))
-        (return)))))
+      (incf current-generation))))
 
 (defun tick (game)
   (draw game)
@@ -53,7 +47,7 @@
   (when *sleep-time*
     (sleep *sleep-time*))
 
-  (multiple-value-bind (state changed-cell-count) (agol.core::next-generation game)
+  (multiple-value-bind (state changed-cell-count) (next-generation game)
     (declare (ignore state))
     (s:true (plusp changed-cell-count))))
 

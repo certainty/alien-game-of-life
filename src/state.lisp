@@ -1,4 +1,4 @@
-(in-package :agol.core)
+(in-package :agol)
 
 ;;; Cells are 8-bit unsigned integers
 ;;; The bit pattern is
@@ -154,15 +154,6 @@
     :initarg :enable-colors-p
     :initform *enable-colors*
     :type boolean)
-   (mutation-rate
-    :initarg :mutation-rate
-    :initform *mutation-rate*
-    :type float)
-   (stop-when-stable-p
-    :reader stop-when-stable-p
-    :initarg :stop-when-stable-p
-    :initform nil
-    :type (or null boolean))
    (live-grid
     :reader live-grid
     :initarg :live-grid
@@ -179,15 +170,13 @@
     :initform 1
     :type (unsigned-byte 64))))
 
-(defun initial-state (rows columns &key grid-wraps-around-p enable-colors-p mutation-rate stop-when-stable-p)
+(defun initial-state (rows columns &key grid-wraps-around-p enable-colors-p)
   "Create the initial game state with a board of `ROWS' and `COLUMNS'.
    The board is populated with random cells using `MAKE-RANDOM-CELL'"
   (make-instance 'state
                  :live-grid (make-grid rows columns :cell-constructor #'make-random-cell :wraps-around-p grid-wraps-around-p)
                  :update-grid (make-grid rows columns :cell-constructor #'make-cell :wraps-around-p grid-wraps-around-p)
-                 :enable-colors-p enable-colors-p
-                 :mutation-rate mutation-rate
-                 :stop-when-stable-p stop-when-stable-p))
+                 :enable-colors-p enable-colors-p))
 
 (defun gref (state row column)
   (with-slots (live-grid) state
