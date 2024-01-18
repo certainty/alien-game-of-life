@@ -1,7 +1,9 @@
 .PHONY: run build
 
+LISP ?= sbcl --noinform
+
 run: build
 	./bin/agol
 
 build:
-	sbcl --eval '(ql:quickload :alien-game-of-life)' --eval '(asdf:make :alien-game-of-life)' --quit
+	$(LISP) --eval '(ql:quickload :alien-game-of-life)' --eval '(asdf:make :alien-game-of-life)' --quit
