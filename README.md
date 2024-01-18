@@ -19,6 +19,9 @@ The code should be portable accross implementations, although I've only tested i
 
 ![image](https://github.com/certainty/alien-game-of-life/assets/338957/c7db9a7d-d85e-45a2-a05e-e5c366bbcc8a)
 
+![image](https://github.com/certainty/alien-game-of-life/assets/338957/e7a04f5c-5f35-4ee3-b3f0-385d4baac0b4)
+
+
 
 ## Todo
 
