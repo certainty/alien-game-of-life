@@ -5,7 +5,7 @@
 1. [Common Lisp implementation](https://roswell.github.io/)
 2. [Quicklisp](https://www.quicklisp.org/beta/)
 
-In summary, you should know how to develop with common lisp. Sorry for the inconcenience :)
+In summary, you should know how to develop with common lisp. Sorry for the inconvenience :)
 
 ## Run it
 
@@ -18,6 +18,9 @@ The code should be portable accross implementations, although I've only tested i
 ## Screenshot
 
 ![image](https://github.com/certainty/alien-game-of-life/assets/338957/c7db9a7d-d85e-45a2-a05e-e5c366bbcc8a)
+
+![image](https://github.com/certainty/alien-game-of-life/assets/338957/8898279b-87b1-4373-be07-ed862846b88c)
+
 
 ## Todo
 
