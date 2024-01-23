@@ -17,10 +17,11 @@ The code should be portable accross implementations, although I've only tested i
 
 ## Screenshot
 
-![image](https://github.com/certainty/alien-game-of-life/assets/338957/c7db9a7d-d85e-45a2-a05e-e5c366bbcc8a)
+![image](https://github.com/certainty/alien-game-of-life/assets/338957/27da60a3-cee1-48e4-ba44-d8806e45c345)
 
+
+![image](https://github.com/certainty/alien-game-of-life/assets/338957/fff8b4e2-49df-4c34-9eda-5cb5b9c16fdf)
 
 ## Todo
 
-- [ ] Optimize IO for console frontend
 - [ ] Add sdl2 frontend
