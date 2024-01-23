@@ -226,13 +226,6 @@
       changed-cells)))
 
 (defun compute-color (live-neighbours)
-  "Compute the color of a cell based on the `LIVE-NEIGHBOURS'
-   The following rules apply:
-   1. If two parents have the same color (i.e. they form a majority), the child has the same color. (This is the same as Life and Immigration).
-   2. If two parents have opposite colors, they cancel, and the child has the same color as the third parent.
-   3. Otherwise, if one parent has the opposite type from the other two, the child inherits its color.
-   4. Otherwise, when all three parents have the same type, the child is of the opposite type of the fourth color. (This is similar to, but quite different than Quad-Life)
-  "
   (let* ((colors (mapcar #'cell-color live-neighbours))
          (distinct-colors (remove-duplicates colors)))
     (cond
