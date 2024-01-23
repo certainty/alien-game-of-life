@@ -1,75 +1,70 @@
 (in-package :agol)
 
-;;; Cells are 8-bit unsigned integers
-;;; The bit pattern is
-;;; The zeroth bit is 1 if the cell is alive, 0 if it is dead
-;;; The next three bits encode color (0-7)
-(deftype cell-t () '(unsigned-byte 8))
-(deftype color-t () '(integer 0 7))
+(defclass cell ()
+  ((alive-p
+    :reader cell-alive-p
+    :initarg :alive-p
+    :initform nil
+    :type boolean)
+   (color
+    :reader cell-color
+    :initarg :color
+    :initform nil
+    :type (or null cl-colors2::rgb))))
 
-(s:defconst +color-yellow+ 0)
-(s:defconst +color-green+ 1)
-(s:defconst +color-blue+ 2)
-(s:defconst +color-red-violet+ 3)
+(defmethod print-object ((cell cell) stream)
+  (print-unreadable-object (cell stream :type t :identity t)
+    (with-slots (alive-p color) cell
+      (format stream "~A ~A" (if alive-p "ALIVE" "DEAD") color))))
 
-;; complements
-(s:defconst +color-violet+ 4)
-(s:defconst +color-red+ 5)
-(s:defconst +color-orange+ 6)
-(s:defconst +color-yellow-green+ 7)
+(defun make-cell (&optional alive-p (color (cl-colors2:as-rgb 0)))
+  (make-instance 'cell :alive-p alive-p :color color))
 
-(-> make-cell (&key (:alive-p boolean) (:color (or null color-t))) cell-t)
-(defun make-cell (&key (alive-p nil) (color nil))
-  "Create a new cell.  If `ALIVE-P' is true, the cell is alive, otherwise it is dead.
-  `COLOR' is the color of the cell and must be an integer between 0 and 7."
-  (let ((cell 0))
-    (setf (ldb (byte 1 0) cell) (if alive-p 1 0))
-    (when color
-      (setf (ldb (byte 3 1) cell) color))
-    cell))
-
-(-> make-random-cell () cell-t)
 (defun make-random-cell ()
   "Create a new cell with a random state and color"
-  (make-cell :alive-p (plusp (random 2))
-             :color (random-color)))
+  (make-cell (plusp (random 2)) (random-color)))
 
-(-> cell-alive-p (cell-t) boolean)
-(defun cell-alive-p (cell)
-  "Return true if the `CELL' is alive, false otherwise"
-  (s:true (ldb-test (byte 1 0) cell)))
-
-(-> cell-dead-p (cell-t) boolean)
+(-> cell-dead-p (cell) boolean)
 (defun cell-dead-p (cell)
   "Return true if the `CELL' is dead, false otherwise"
   (not (cell-alive-p cell)))
 
-(-> cell-color (cell-t) color-t)
-(defun cell-color (cell)
-  "Return the color of the `CELL'"
-  (ldb (byte 3 1) cell))
-
 (-> random-color () color-t)
 (defun random-color ()
   "Return a random color"
-  (random 8))
+  (cl-colors2:as-rgb (random 16777216)))
 
 (defun complement-of (color)
   "Return the complement of `COLOR'"
   (mod (+ color 3) 7))
 
-(-> change-cell (cell-t  &key (:alive-p boolean) (:color (or null color-t))) cell-t)
-(defun change-cell (cell &key (alive-p nil) (color nil))
-  "Update the state of the `CELL' to `ALIVE-P' and (optionally) `COLOR'"
-  (setf (ldb (byte 1 0) cell) (if alive-p 1 0))
-  (when color (setf (ldb (byte 3 1) cell) color))
-  cell)
+(defun mix-colors (a b)
+  "Mix the colors `A' and `B'"
+  (cl-colors2:rgb-combination a b 0.5))
+
+(defun kill-cell (cell)
+  "Kill the `CELL'"
+  (prog1 cell
+    (with-slots (alive-p) cell
+      (setf alive-p nil))))
+
+(defun resurrect-cell (cell &optional new-color)
+  "Resurrect the `CELL'"
+  (prog1 cell
+    (with-slots (alive-p color) cell
+      (setf alive-p t)
+      (when new-color
+        (setf color new-color)))))
+
+(defun copy-cell (cell)
+  "Create a copy of the `CELL'"
+  (make-cell (cell-alive-p cell) (cell-color cell)))
 
 (defclass grid ()
   ((cells
     :initarg :cells
     :initform (error "Must supply cells")
-    :type (array cell-t))
+    :type (array cell))
    (rows
     :initarg :rows
     :initform (error "Must supply rows")
@@ -83,12 +78,13 @@
     :initform nil
     :type boolean)))
 
-(s:define-do-macro do-cells (((cells row column) grid &optional return) &body body)
-  `(let ((,cells (slot-value ,grid 'cells)))
-     (with-slots (rows columns) ,grid
-       (loop :for ,row :from 0 :below rows
-             :do (loop :for ,column :from 0 :below columns
-                       :do (progn ,@body))))))
+(defun make-grid (rows columns &key (cell-constructor #'make-random-cell) wraps-around-p)
+  (let ((cells (make-array (list rows columns) :initial-element nil)))
+    ;; loop over all array slots and call the cell constructor
+    (loop :for row :from 0 :below rows
+          :do (loop :for column :from 0 :below columns
+                    :do (setf (aref cells row column) (funcall cell-constructor))))
+    (make-instance 'grid :cells cells :rows rows :columns columns :wraps-around-p wraps-around-p)))
 
 (defmethod print-object ((grid grid) stream)
   (with-slots (rows columns cells) grid
@@ -98,13 +94,15 @@
                   collect (loop for column below columns
                                 collect (aref cells row column))))))
 
-(defun make-grid (rows columns &key (cell-constructor #'make-cell) wraps-around-p )
-  (let ((grid (make-instance 'grid
-                             :wraps-around-p wraps-around-p
-                             :cells (make-array (list rows columns) :element-type 'cell-t :initial-element 0) :columns columns :rows rows)))
-    (prog1 grid
-      (do-cells ((cells row column) grid)
-        (setf (aref cells row column) (funcall cell-constructor))))))
+(s:define-do-macro do-cells (((cell row column) grid &optional return) &body body)
+  (a:with-gensyms (cells)
+    `(let ((,cells (slot-value ,grid 'cells)))
+       (with-slots (rows columns) ,grid
+         (loop :for ,row :from 0 :below rows
+               :do (loop :for ,column :from 0 :below columns
+                         :do
+                            (let ((,cell (aref ,cells ,row ,column)))
+                              (progn ,@body))))))))
 
 (s:define-do-macro do-neighbours (((cell neighbour-row neighbour-column) grid row column &optional return) &body body)
   "Iterate over the neighbours of the cell at `ROW' and `COLUMN' in `GRID' and evaluate `BODY' for each one.
@@ -127,26 +125,21 @@
                                  (let ((,cell (aref cells ,nrow ,ncolumn)))
                                    ,@body)))))))))
 
-(defun count-live-neighbours (grid row column)
-  "Count the number of live neighbours of the cell at `ROW' and `COLUMN' in `GRID'"
-  (length (live-neighbours grid row column)))
+(defun copy-grid (grid)
+  "Create a copy of the `GRID'"
+  (with-slots (rows columns cells wraps-around-p) grid
+    (let ((new-cells (make-array (list rows columns) :initial-element nil)))
+      (do-cells ((cell row column) grid)
+        (setf (aref new-cells row column) (copy-cell cell)))
+      (make-instance 'grid :cells new-cells :rows rows :columns columns :wraps-around-p wraps-around-p))))
 
-(defun live-neighbours (grid row column)
+(defun living-neighbours (grid row column)
   "Return a list of the live neighbours of the cell at `ROW' and `COLUMN' in `GRID'"
   (let ((neighbours (list)))
     (do-neighbours ((neighbour nrow ncolumn) grid row column)
       (when (cell-alive-p neighbour)
         (push neighbour neighbours)))
     neighbours))
-
-(defun count-live-cells (grid)
-  "Count the number of live cells in `GRID'"
-  (let ((count 0))
-    (do-cells ((cells row column) grid)
-      (when (cell-alive-p (aref cells row column))
-        (incf count)))
-    count))
-
 
 (defclass state ()
   ((enable-colors-p
@@ -170,57 +163,56 @@
     :initform 1
     :type (unsigned-byte 64))))
 
-(defun initial-state (rows columns &key grid-wraps-around-p enable-colors-p)
+(defun make-state (rows columns &key grid-wraps-around-p enable-colors-p)
   "Create the initial game state with a board of `ROWS' and `COLUMNS'.
    The board is populated with random cells using `MAKE-RANDOM-CELL'"
-  (make-instance 'state
-                 :live-grid (make-grid rows columns :cell-constructor #'make-random-cell :wraps-around-p grid-wraps-around-p)
-                 :update-grid (make-grid rows columns :cell-constructor #'make-cell :wraps-around-p grid-wraps-around-p)
-                 :enable-colors-p enable-colors-p))
+  (let ((live-grid (make-grid rows columns :cell-constructor #'make-random-cell :wraps-around-p grid-wraps-around-p)))
+    (make-instance 'state
+                   :live-grid live-grid
+                   :update-grid (copy-grid live-grid)
+                   :enable-colors-p enable-colors-p)))
 
-(defun gref (state row column)
-  (with-slots (live-grid) state
-    (aref (slot-value live-grid 'cells) row column)))
+(defun gref (grid row column)
+  "Get the cell at `ROW' and `COLUMN' in `GRID'"
+  (aref (slot-value grid 'cells) row column))
+
+(defsetf gref (grid row column) (new-value)
+  `(setf (aref (slot-value ,grid 'cells) ,row ,column) ,new-value))
 
 (defun live-cells (state)
   (with-slots (live-grid) state
-    (count-live-cells live-grid)))
-
-(defun next-generation (state)
-  "Computes the next state and returns two values
-   1. The next state
-   2. The number of cells that changed state
-  "
-  (with-slots (live-grid update-grid generation) state
-    (let ((update-cells (slot-value update-grid 'cells))
-          (changed-cells 0))
-      (do-cells ((cells row column) live-grid)
-        (let ((cell (aref cells row column))
-              (live-neighbours (live-neighbours live-grid row column)))
-          (multiple-value-bind (updated-cell changed-p)
-              (updated-cell cell live-neighbours)
-            (when changed-p
-              (incf changed-cells))
-            (setf (aref update-cells row column) updated-cell))))
-      (incf generation)
-      (rotatef live-grid update-grid)
-      (values state changed-cells))))
+    (let ((count 0))
+      (do-cells ((cell row column) live-grid)
+        (when (cell-alive-p cell)
+          (incf count)))
+      count)))
 
 ;;; 1. If the cell is alive, then it stays alive if it has either 2 or 3 live neighbors
 ;;; 2. If the cell is dead, then it springs to life only in the case that it has 3 live neighbors
-(defun updated-cell (cell live-neighbours &optional enable-colors-p)
-  "Update the state of the `CELL' based on the number of `LIVE-NEIGHBOURS'
-   Returns two values
-   1. The updated cell
-   2. True if the cell changed state, false otherwise
-  "
-  (let ((alive-neighbours (length live-neighbours)))
-    (cond
-      ((and (cell-alive-p cell) (not (or (= alive-neighbours 2) (= alive-neighbours 3))))
-       (values (change-cell cell :alive-p nil) t))
-      ((and (cell-dead-p cell) (= alive-neighbours 3))
-       (values (change-cell cell :alive-p t :color (and enable-colors-p (compute-color live-neighbours))) t))
-      (t (values cell nil)))))
+(defun next-generation (state)
+  "Updates the state and returns the number of cells that changed"
+  (with-slots (live-grid update-grid generation) state
+    (let ((changed-cells 0))
+      (do-cells ((cell row column) live-grid)
+        (let* ((cell-to-update (gref update-grid row column))
+               (live-neighbours (living-neighbours live-grid row column))
+               (live-neighbours-# (length live-neighbours)))
+
+          ;; FIXME: we should be able to go without this
+          (with-slots (alive-p color) cell-to-update
+            (setf alive-p (cell-alive-p cell))
+            (setf color (cell-color cell)))
+
+          (if (cell-alive-p cell)
+              (when (not (or (= live-neighbours-# 2) (= live-neighbours-# 3)))
+                (incf changed-cells)
+                (kill-cell cell-to-update))
+              (when (= live-neighbours-# 3)
+                (incf changed-cells)
+                (resurrect-cell cell-to-update (and (enable-colors-p state) (compute-color live-neighbours)))))))
+      (incf generation)
+      (rotatef live-grid update-grid)
+      changed-cells)))
 
 (defun compute-color (live-neighbours)
   "Compute the color of a cell based on the `LIVE-NEIGHBOURS'
@@ -230,17 +222,14 @@
    3. Otherwise, if one parent has the opposite type from the other two, the child inherits its color.
    4. Otherwise, when all three parents have the same type, the child is of the opposite type of the fourth color. (This is similar to, but quite different than Quad-Life)
   "
-  (let ((colors (mapcar #'cell-color live-neighbouers))
-        (distinct-colors (remove-duplicates colors)))
+  (let* ((colors (mapcar #'cell-color live-neighbours))
+         (distinct-colors (remove-duplicates colors)))
     (cond
       ;; all the same
       ((= (length distinct-colors) 1)
-       (complement-of +color-violet+))
+       (first distinct-colors))
       ;; two the same
       ((= (length distinct-colors) 2)
-       (if (= (first distinct-colors) (complement-of (second distinct-colors)))
-           (second distinct-colors)
-           (first distinct-colors)))
+       (mix-colors (first distinct-colors) (second distinct-colors)))
       ;; all different
-      ((any (lambda (color) (member (complement-of color) distinct-colors)) distinct-colors)
-       (complement-of (first distinct-colors))))))
+      (t (mix-colors (first distinct-colors) (mix-colors (second distinct-colors) (third distinct-colors)))))))

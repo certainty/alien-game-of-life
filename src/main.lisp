@@ -24,7 +24,7 @@
       (sb-ext:quit))))
 
 (defun make-game ()
-  (initial-state
+  (make-state
    *grid-rows*
    *grid-columns*
    :grid-wraps-around-p *grid-wraps-around-p*
@@ -33,23 +33,18 @@
 (defun run-game ()
   (let* ((game (make-game))
          (current-generation 0)
-         (ticks-without-change 0))
+         (ticks-without-change 0)
+         (console (agol.frontend.console::make-console)))
     (loop
       (when (or *stop-game* (and *max-generations* (> current-generation *max-generations*)))
         (return))
-      (unless (tick game)
+      (unless (tick console game)
         (incf ticks-without-change))
       (incf current-generation))))
 
-(defun tick (game)
-  (draw game)
-
+(defun tick (console game)
+  (agol.frontend.console::draw console game)
   (when *sleep-time*
     (sleep *sleep-time*))
+  (plusp (next-generation game)))
 
-  (multiple-value-bind (state changed-cell-count) (next-generation game)
-    (declare (ignore state))
-    (s:true (plusp changed-cell-count))))
-
-(defun draw (game)
-  (agol.frontend.console::draw game))
