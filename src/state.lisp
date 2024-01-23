@@ -40,7 +40,7 @@
 
 (defun mix-colors (a b)
   "Mix the colors `A' and `B'"
-  (cl-colors2:rgb-combination a b 0.5))
+  (cl-colors2:rgb-combination a b 0.7))
 
 (defun kill-cell (cell)
   "Kill the `CELL'"
@@ -147,6 +147,11 @@
     :initarg :enable-colors-p
     :initform *enable-colors*
     :type boolean)
+   (mutation-rate
+    :reader mutation-rate
+    :initarg :mutation-rate
+    :initform 0
+    :type (real 0 1))
    (live-grid
     :reader live-grid
     :initarg :live-grid
@@ -163,14 +168,15 @@
     :initform 1
     :type (unsigned-byte 64))))
 
-(defun make-state (rows columns &key grid-wraps-around-p enable-colors-p)
+(defun make-state (rows columns &key grid-wraps-around-p enable-colors-p (mutation-rate 0))
   "Create the initial game state with a board of `ROWS' and `COLUMNS'.
    The board is populated with random cells using `MAKE-RANDOM-CELL'"
   (let ((live-grid (make-grid rows columns :cell-constructor #'make-random-cell :wraps-around-p grid-wraps-around-p)))
     (make-instance 'state
                    :live-grid live-grid
                    :update-grid (copy-grid live-grid)
-                   :enable-colors-p enable-colors-p)))
+                   :enable-colors-p enable-colors-p
+                   :mutation-rate mutation-rate)))
 
 (defun gref (grid row column)
   "Get the cell at `ROW' and `COLUMN' in `GRID'"
@@ -209,7 +215,12 @@
                 (kill-cell cell-to-update))
               (when (= live-neighbours-# 3)
                 (incf changed-cells)
-                (resurrect-cell cell-to-update (and (enable-colors-p state) (compute-color live-neighbours)))))))
+                (if (enable-colors-p state)
+                    (let ((new-color (compute-color live-neighbours)))
+                      (when (and (mutation-rate state) (<= (random 1.0) (mutation-rate state)))
+                        (setf new-color (random-color)))
+                      (resurrect-cell cell-to-update new-color))
+                    (resurrect-cell cell-to-update))))))
       (incf generation)
       (rotatef live-grid update-grid)
       changed-cells)))

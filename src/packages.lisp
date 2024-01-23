@@ -5,6 +5,7 @@
   (:local-nicknames (:a :alexandria) (:s :serapeum))
   (:import-from :serapeum :->)
   (:export
+   :draw
    :run-game
    :main))
 
@@ -13,5 +14,4 @@
   (:local-nicknames (:a :alexandria) (:s :serapeum))
   (:import-from :serapeum :->)
   (:export
-   :draw
    :draw-grid))

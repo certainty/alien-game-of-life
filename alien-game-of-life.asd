@@ -17,7 +17,6 @@
   ((:file "packages")
    (:file "settings")
    (:file "state")
-   (:module "frontend"
-    :components
-    ((:file "console")))
+   (:file "frontend")
+   (:file "console")
    (:file "main")))

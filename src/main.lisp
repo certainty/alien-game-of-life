@@ -28,7 +28,8 @@
    *grid-rows*
    *grid-columns*
    :grid-wraps-around-p *grid-wraps-around-p*
-   :enable-colors-p *enable-colors-p*))
+   :enable-colors-p *enable-colors-p*
+   :mutation-rate *mutation-rate*))
 
 (defun run-game ()
   (let* ((game (make-game))
@@ -43,7 +44,7 @@
       (incf current-generation))))
 
 (defun tick (console game)
-  (agol.frontend.console::draw console game)
+  (draw console game)
   (when *sleep-time*
     (sleep *sleep-time*))
   (plusp (next-generation game)))
