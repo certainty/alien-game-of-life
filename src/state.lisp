@@ -218,7 +218,7 @@
                 (if (enable-colors-p state)
                     (let ((new-color (compute-color live-neighbours)))
                       (when (and (mutation-rate state) (<= (random 1.0) (mutation-rate state)))
-                        (setf new-color (random-color)))
+                        (setf new-color (mix-colors (random-color) new-color)))
                       (resurrect-cell cell-to-update new-color))
                     (resurrect-cell cell-to-update))))))
       (incf generation)
